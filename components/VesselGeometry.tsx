@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { generateVesselGeometry, generateBaseCylinderGeometry } from "@/utils/generateGeometry";
 import type { BaseParameters, ControlPoint } from "@/types/curve";
@@ -12,6 +12,9 @@ interface VesselGeometryProps {
 }
 
 export default function VesselGeometry({ baseParams, controlPoints }: VesselGeometryProps) {
+  const groupRef = useRef<THREE.Group>(null); // Create a ref for the group
+
+  // Vessel Geometry
   const profileGeometry = useMemo(() => {
     if (!controlPoints || controlPoints.length < 2) {
       console.error("Not enough control points to generate vessel.");
@@ -27,6 +30,7 @@ export default function VesselGeometry({ baseParams, controlPoints }: VesselGeom
     }
   }, [baseParams, controlPoints]);
 
+  // Base Geometry
   const baseGeometry = useMemo(() => {
     if (!baseParams) {
       console.error("Base parameters missing.");
@@ -42,30 +46,29 @@ export default function VesselGeometry({ baseParams, controlPoints }: VesselGeom
     }
   }, [baseParams]);
 
-  // Ref for rotating animation
-  const groupRef = useFrame((state, delta) => {
+  // Animation for group
+  useFrame((state, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.1; // Slowly rotate
+      groupRef.current.rotation.y += delta * 0.1; // Slow rotation
     }
   });
 
-  const group = new THREE.Group();
-
   return (
-    <group ref={groupRef as any}>
-      {/* Profile Vessel */}
+    <group ref={groupRef}>
+      {/* Vessel Shape */}
       {profileGeometry && profileGeometry.attributes.position ? (
         <mesh geometry={profileGeometry} castShadow receiveShadow>
           <meshStandardMaterial color="#4287f5" metalness={0.5} roughness={0.5} />
         </mesh>
       ) : (
+        // Fallback if no profile geometry
         <mesh>
           <boxGeometry args={[10, 10, 10]} />
           <meshStandardMaterial color="red" wireframe />
         </mesh>
       )}
 
-      {/* Base Cylinder */}
+      {/* Base Shape */}
       {baseGeometry && baseGeometry.attributes.position ? (
         <mesh geometry={baseGeometry} position={[0, 0, 0]} castShadow receiveShadow>
           <meshStandardMaterial color="#aaaaaa" metalness={0.3} roughness={0.7} />
