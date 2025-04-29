@@ -16,30 +16,10 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Debugging incoming props
-  console.log("Viewer3D Props - baseParams:", baseParams);
-  console.log("Viewer3D Props - controlPoints:", controlPoints);
-
-  // Only render on client side
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Temporary: Force testing data
-  const baseParamsTest: BaseParameters = {
-    outerDiameter: 100,
-    wallThickness: 5,
-    maxHeight: 200,
-  };
-
-  const controlPointsTest: ControlPoint[] = [
-    { x: 0, y: 0 },
-    { x: 50, y: 50 },
-    { x: 30, y: 100 },
-    { x: 0, y: 200 },
-  ];
-
-  // Handle errors in the 3D rendering
   const handleError = (error: Error) => {
     console.error("Error in 3D viewer:", error);
     setErrorMessage(error.message || "Error rendering 3D scene");
@@ -68,15 +48,6 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
     );
   }
 
-  // If invalid incoming props, show message
-  if (!baseParams || !controlPoints || controlPoints.length === 0) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100">
-        <p className="text-lg font-mono text-red-500">Invalid parameters. Cannot render 3D model.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full h-full relative">
       <Canvas shadows className="w-full h-full" onError={handleError}>
@@ -93,8 +64,7 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
         <spotLight position={[-100, 100, 100]} intensity={0.8} angle={0.5} penumbra={1} castShadow />
 
         <Suspense fallback={<LoadingFallback />}>
-          {/* Use testing data */}
-          <VesselGeometryWrapper baseParams={baseParamsTest} controlPoints={controlPointsTest} />
+          <VesselGeometryWrapper baseParams={baseParams} controlPoints={controlPoints} />
         </Suspense>
 
         <Grid
@@ -110,7 +80,7 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
           dampingFactor={0.05}
           minDistance={50}
           maxDistance={500}
-          target={[0, baseParamsTest.maxHeight / 2, 0]}
+          target={[0, baseParams.maxHeight / 2, 0]}
         />
         <Environment preset="studio" />
         <axesHelper args={[50]} />
@@ -127,13 +97,12 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
       </Canvas>
 
       <div className="absolute bottom-2 left-2 text-xs text-white bg-black bg-opacity-50 p-1 rounded">
-        Points: {controlPointsTest.length} | Diameter: {baseParamsTest.outerDiameter}mm | Height: {baseParamsTest.maxHeight}mm
+        Points: {controlPoints.length} | Diameter: {baseParams.outerDiameter}mm | Height: {baseParams.maxHeight}mm
       </div>
     </div>
   );
 }
 
-// Loading fallback component
 function LoadingFallback() {
   return (
     <Text position={[0, 0, 0]} fontSize={20} color="#CCCCCC">
@@ -142,7 +111,6 @@ function LoadingFallback() {
   );
 }
 
-// Wrapper component with error handling
 function VesselGeometryWrapper({ baseParams, controlPoints }: Viewer3DProps) {
   try {
     return <VesselGeometry baseParams={baseParams} controlPoints={controlPoints} />;
