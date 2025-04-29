@@ -1,79 +1,52 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { generateVesselGeometry, generateBaseCylinderGeometry } from "@/utils/generateGeometry";
-import type { BaseParameters, ControlPoint } from "@/types/curve";
+import { useMemo, forwardRef } from "react";
 import * as THREE from "three";
+import type { BaseParameters, ControlPoint } from "@/types/curve";
 
 interface VesselGeometryProps {
-  baseParams?: BaseParameters;
-  controlPoints?: ControlPoint[];
+  baseParams: BaseParameters;
+  controlPoints: ControlPoint[];
 }
 
-export default function VesselGeometry({ baseParams, controlPoints }: VesselGeometryProps) {
-  const groupRef = useRef<THREE.Group>(null!);
+// ForwardRef is crucial to allow parent (Viewer3D) to access the mesh
+const VesselGeometry = forwardRef<THREE.Mesh, VesselGeometryProps>(
+  ({ baseParams, controlPoints }, ref) => {
+    const geometry = useMemo(() => {
+      const curve = new THREE.CatmullRomCurve3(
+        controlPoints.map((p) => new THREE.Vector3(p.x, p.y, 0)),
+        false,
+        "centripetal",
+        0.5
+      );
 
-  // Inject test data if missing
-  const testBaseParams: BaseParameters = { outerDiameter: 100, wallThickness: 5, maxHeight: 200 };
-  const testControlPoints: ControlPoint[] = [
-    { x: 0, y: 0 },
-    { x: 25, y: 50 },
-    { x: 50, y: 80 },
-    { x: 25, y: 100 },
-  ];
+      const points = curve.getPoints(50); // 50 profile points
+      const shape = new THREE.Shape(points.map(p => new THREE.Vector2(p.x, p.y)));
 
-  const safeBaseParams = baseParams ?? testBaseParams;
-  const safeControlPoints = (controlPoints && controlPoints.length > 1) ? controlPoints : testControlPoints;
+      const extrudeSettings: THREE.ExtrudeGeometryOptions = {
+        steps: 1,
+        depth: baseParams.wallThickness,
+        bevelEnabled: false,
+        extrudePath: new THREE.CurvePath<THREE.Vector3>(),
+      };
 
-  const profileGeometry = useMemo(() => {
-    try {
-      const geom = generateVesselGeometry(safeBaseParams, safeControlPoints);
-      console.log("Generated Vessel Geometry:", geom);
-      return geom;
-    } catch (error) {
-      console.error("Error generating vessel geometry:", error);
-      return new THREE.BoxGeometry(10, 10, 10);
-    }
-  }, [safeBaseParams, safeControlPoints]);
+      const latheGeometry = new THREE.LatheGeometry(
+        points,
+        64 // number of radial segments
+      );
 
-  const baseGeometry = useMemo(() => {
-    try {
-      const geom = generateBaseCylinderGeometry(safeBaseParams);
-      console.log("Generated Base Cylinder Geometry:", geom);
-      return geom;
-    } catch (error) {
-      console.error("Error generating base cylinder geometry:", error);
-      return new THREE.BoxGeometry(10, 10, 10);
-    }
-  }, [safeBaseParams]);
+      return latheGeometry;
+    }, [baseParams, controlPoints]);
 
-  useFrame((state, delta) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.1;
-    }
-  });
+    return (
+      <mesh ref={ref} geometry={geometry}>
+        <meshStandardMaterial color="#0077ff" metalness={0.1} roughness={0.8} />
+      </mesh>
+    );
+  }
+);
 
-  return (
-    <group ref={groupRef}>
-      {/* Profile Vessel */}
-      {profileGeometry && profileGeometry.attributes.position ? (
-        <mesh geometry={profileGeometry} castShadow receiveShadow>
-          <meshStandardMaterial color="#4287f5" metalness={0.5} roughness={0.5} />
-        </mesh>
-      ) : (
-        <mesh>
-          <boxGeometry args={[10, 10, 10]} />
-          <meshStandardMaterial color="red" wireframe />
-        </mesh>
-      )}
+VesselGeometry.displayName = "VesselGeometry"; // For React DevTools
 
-      {/* Base Cylinder */}
-      {baseGeometry && baseGeometry.attributes.position ? (
-        <mesh geometry={baseGeometry} position={[0, 0, 0]} castShadow receiveShadow>
-          <meshStandardMaterial color="#aaaaaa" metalness={0.3} roughness={0.7} />
-        </mesh>
-      ) : null}
-    </group>
-  );
-}
+export default VesselGeometry;
+
