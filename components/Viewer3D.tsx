@@ -1,31 +1,49 @@
-"use client"
+"use client";
 
-import { useState, useEffect, Suspense } from "react"
-import { Canvas } from "@react-three/fiber"
-import { OrbitControls, PerspectiveCamera, Grid, Environment, Text } from "@react-three/drei"
-import VesselGeometry from "./VesselGeometry"
-import type { ControlPoint, BaseParameters } from "@/types/curve"
-import { colors } from "@/styles/theme"
+import { useState, useEffect, Suspense } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, PerspectiveCamera, Grid, Environment, Text } from "@react-three/drei";
+import VesselGeometry from "./VesselGeometry";
+import type { ControlPoint, BaseParameters } from "@/types/curve";
+import { colors } from "@/styles/theme";
 
 interface Viewer3DProps {
-  baseParams: BaseParameters
-  controlPoints: ControlPoint[]
+  baseParams: BaseParameters;
+  controlPoints: ControlPoint[];
 }
 
 export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Debugging incoming props
+  console.log("Viewer3D Props - baseParams:", baseParams);
+  console.log("Viewer3D Props - controlPoints:", controlPoints);
 
   // Only render on client side
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
+
+  // Temporary: Force testing data
+  const baseParamsTest: BaseParameters = {
+    outerDiameter: 100,
+    wallThickness: 5,
+    maxHeight: 200,
+  };
+
+  const controlPointsTest: ControlPoint[] = [
+    { x: 0, y: 0 },
+    { x: 50, y: 50 },
+    { x: 30, y: 100 },
+    { x: 0, y: 200 },
+  ];
 
   // Handle errors in the 3D rendering
   const handleError = (error: Error) => {
-    console.error("Error in 3D viewer:", error)
-    setErrorMessage(error.message || "Error rendering 3D scene")
-  }
+    console.error("Error in 3D viewer:", error);
+    setErrorMessage(error.message || "Error rendering 3D scene");
+  };
 
   if (!mounted) {
     return (
@@ -34,7 +52,7 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
           <p className="text-lg font-mono">Loading 3D viewer...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (errorMessage) {
@@ -47,7 +65,16 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
           </button>
         </div>
       </div>
-    )
+    );
+  }
+
+  // If invalid incoming props, show message
+  if (!baseParams || !controlPoints || controlPoints.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+        <p className="text-lg font-mono text-red-500">Invalid parameters. Cannot render 3D model.</p>
+      </div>
+    );
   }
 
   return (
@@ -66,14 +93,15 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
         <spotLight position={[-100, 100, 100]} intensity={0.8} angle={0.5} penumbra={1} castShadow />
 
         <Suspense fallback={<LoadingFallback />}>
-          <VesselGeometryWrapper baseParams={baseParams} controlPoints={controlPoints} />
+          {/* Use testing data */}
+          <VesselGeometryWrapper baseParams={baseParamsTest} controlPoints={controlPointsTest} />
         </Suspense>
 
         <Grid
           args={[500, 500]}
           cellSize={10}
           cellThickness={0.5}
-          cellColor="#CCCCCC" // Light gray grid lines
+          cellColor="#CCCCCC"
           position={[0, -0.1, 0]}
           infiniteGrid
         />
@@ -82,14 +110,11 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
           dampingFactor={0.05}
           minDistance={50}
           maxDistance={500}
-          target={[0, baseParams.maxHeight / 2, 0]}
+          target={[0, baseParamsTest.maxHeight / 2, 0]}
         />
         <Environment preset="studio" />
-
-        {/* Add axes helper */}
         <axesHelper args={[50]} />
 
-        {/* Add a scale indicator */}
         <group position={[-100, 0, 0]}>
           <mesh position={[0, 50, 0]}>
             <boxGeometry args={[1, 100, 1]} />
@@ -101,12 +126,11 @@ export default function Viewer3D({ baseParams, controlPoints }: Viewer3DProps) {
         </group>
       </Canvas>
 
-      {/* Debug info overlay */}
       <div className="absolute bottom-2 left-2 text-xs text-white bg-black bg-opacity-50 p-1 rounded">
-        Points: {controlPoints.length} | Diameter: {baseParams.outerDiameter}mm | Height: {baseParams.maxHeight}mm
+        Points: {controlPointsTest.length} | Diameter: {baseParamsTest.outerDiameter}mm | Height: {baseParamsTest.maxHeight}mm
       </div>
     </div>
-  )
+  );
 }
 
 // Loading fallback component
@@ -115,19 +139,19 @@ function LoadingFallback() {
     <Text position={[0, 0, 0]} fontSize={20} color="#CCCCCC">
       Loading 3D model...
     </Text>
-  )
+  );
 }
 
 // Wrapper component with error handling
 function VesselGeometryWrapper({ baseParams, controlPoints }: Viewer3DProps) {
   try {
-    return <VesselGeometry baseParams={baseParams} controlPoints={controlPoints} />
+    return <VesselGeometry baseParams={baseParams} controlPoints={controlPoints} />;
   } catch (error) {
-    console.error("Error rendering vessel geometry:", error)
+    console.error("Error rendering vessel geometry:", error);
     return (
       <Text position={[0, 0, 0]} fontSize={20} color="red">
         Error rendering vessel. Please check console.
       </Text>
-    )
+    );
   }
 }
